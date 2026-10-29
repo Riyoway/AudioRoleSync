@@ -1,26 +1,53 @@
+<div align="center">
+  <img src="resources/app.png" width="132" alt="AudioRoleSync icon">
+
 # AudioRoleSync
 
-<p align="center">
-  <img src="resources/app.png" width="128" alt="AudioRoleSync icon">
+**Keep Windows' default communications playback device in sync with the current default output.**
+
+<p>
+  <a href="https://github.com/Riyoway/AudioRoleSync/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/Riyoway/AudioRoleSync?display_name=tag&style=flat-square"></a>
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows11&logoColor=white">
+  <img alt="Architecture" src="https://img.shields.io/badge/arch-x64-555?style=flat-square">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/Riyoway/AudioRoleSync?style=flat-square"></a>
 </p>
 
-AudioRoleSync is a lightweight native Windows tray utility that keeps the **Default Communications playback device** synchronized with the normal **Default playback device**.
+<p>
+  <a href="https://github.com/Riyoway/AudioRoleSync/releases/latest"><strong>Download</strong></a>
+  ·
+  <a href="docs/demo.mp4"><strong>Watch demo</strong></a>
+  ·
+  <a href="#how-it-works"><strong>How it works</strong></a>
+</p>
+</div>
 
-Windows maintains separate default roles for general audio and communications audio. As a result, voice chat and other communications apps can remain attached to an old output device after the normal Windows output is changed. AudioRoleSync keeps those roles aligned automatically.
+---
+
+AudioRoleSync is a tiny native Windows tray utility that keeps the **Default Communications playback device** synchronized with the normal **Default playback device**.
+
+Windows maintains separate default roles for general audio and communications audio. Because of that, apps that use the communications role can remain attached to an old output after the normal Windows output is changed. AudioRoleSync keeps both playback roles aligned automatically.
+
+## Demo
+
+GitHub does not render repository MP4 files inline inside README pages, so the demo opens as a normal video when clicked.
+
+[![Watch demo](https://img.shields.io/badge/%E2%96%B6%20Watch%20the%20demo-2387F2?style=for-the-badge)](docs/demo.mp4)
 
 ## Features
 
-- Automatically synchronizes the default communications playback device with the normal default playback device.
-- Runs entirely from the Windows system tray with no settings window.
-- Starts with Windows by default on first launch.
-- Manual **Sync now** action from the tray menu.
-- Event-driven Core Audio monitoring with no continuous polling loop.
-- Native Win32 C++ with no .NET, Electron, WebView, NAudio, or PowerShell runtime dependency.
-- No administrator privileges required.
-- No network access, telemetry, background service, or updater.
-- Available as both an installer and a portable build.
+- **Automatic synchronization** of the default communications playback device with the normal default playback device.
+- **System tray only** with no settings window or visible background UI.
+- **Starts with Windows by default** on first launch.
+- **Manual Sync now** action from the tray context menu.
+- **Event-driven Core Audio monitoring** with no continuous polling loop.
+- **Native Win32 C++** with no .NET, Electron, WebView, NAudio, or PowerShell runtime dependency.
+- **No administrator privileges required.**
+- **No network access, telemetry, background service, or updater.**
+- Available as both an **installer** and a **portable build**.
 
 ## Installation
+
+Download the latest build from [Releases](https://github.com/Riyoway/AudioRoleSync/releases/latest).
 
 ### Installer
 
@@ -32,18 +59,30 @@ Extract the portable ZIP and run `AudioRoleSync.exe`. No installation is require
 
 On first launch, **Start with Windows** is enabled by default. It can be disabled from the tray menu at any time.
 
+> [!NOTE]
 > Release binaries are currently unsigned. Windows SmartScreen may display a warning until signed builds are available.
 
 ## Usage
 
 AudioRoleSync has no main window. Right-click its system tray icon to access:
 
-- **Automatic sync** - enable or disable automatic synchronization.
-- **Sync now** - immediately synchronize the playback roles.
-- **Start with Windows** - enable or disable startup at Windows sign-in.
-- **Exit** - close AudioRoleSync.
+| Action | Description |
+| --- | --- |
+| **Automatic sync** | Enable or disable automatic synchronization. |
+| **Sync now** | Immediately synchronize the playback roles. |
+| **Start with Windows** | Enable or disable startup at Windows sign-in. |
+| **Exit** | Close AudioRoleSync. |
 
-When automatic sync is enabled, changing the normal Windows playback device automatically updates the communications playback device to the same endpoint.
+With automatic sync enabled, the flow is simply:
+
+```text
+Windows default playback changes
+              ↓
+     AudioRoleSync detects it
+              ↓
+Default Communications playback
+   is updated to the same device
+```
 
 ## How it works
 
@@ -55,7 +94,7 @@ Windows does not provide a documented public API for changing the default endpoi
 
 ## Runtime footprint
 
-The application is intentionally small and event-driven. At runtime it keeps only the components required for Core Audio notifications, the hidden message window used by the tray icon, and the tray icon itself.
+AudioRoleSync is intentionally small and event-driven. At runtime it keeps only the components required for Core Audio notifications, the hidden message window used by the tray icon, and the tray icon itself.
 
 No timer runs continuously. A short debounce timer is created only after Windows reports a relevant audio endpoint change.
 
@@ -70,7 +109,7 @@ Actual memory usage varies by Windows version and loaded system components.
 
 ### Building
 
-- Visual Studio 2022 or newer with the Desktop development with C++ workload
+- Visual Studio 2022 or newer with the **Desktop development with C++** workload
 - CMake 3.24 or newer
 - Inno Setup 6 only when building the installer
 
@@ -107,6 +146,7 @@ The Release configuration statically links the MSVC runtime and enables link-tim
 
 ```text
 .github/workflows/   GitHub Actions build and release workflows
+docs/                Demo video and documentation assets
 installer/           Inno Setup definition
 resources/           Application icon and Windows resources
 scripts/             Local build and packaging scripts
