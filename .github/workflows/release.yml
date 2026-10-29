@@ -32,8 +32,13 @@ jobs:
           if (-not (gh release view $env:TAG 2>$null)) {
             gh release create $env:TAG --title "AudioRoleSync $env:TAG" --generate-notes
           }
-          $assets = @(
-            Get-ChildItem ./dist/*-portable.zip,
-            Get-ChildItem ./dist/*-setup.exe
-          ) | ForEach-Object { $_.FullName }
+
+          $assets = Get-ChildItem -Path ./dist -File | Where-Object {
+            $_.Name -like '*-portable.zip' -or $_.Name -like '*-setup.exe'
+          } | Select-Object -ExpandProperty FullName
+
+          if ($assets.Count -ne 2) {
+            throw "Expected 2 release assets, found $($assets.Count)."
+          }
+
           gh release upload $env:TAG $assets --clobber
