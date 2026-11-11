@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(AudioRoleSync VERSION 0.0.1 LANGUAGES CXX RC)
+project(AudioRoleSync VERSION 0.0.2 LANGUAGES CXX RC)
 
 configure_file(
     resources/version.rc.in
