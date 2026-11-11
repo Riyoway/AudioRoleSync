@@ -138,11 +138,11 @@ Build both release packages:
 ./scripts/build-release.ps1
 ```
 
-Outputs for v0.0.1:
+Outputs for v0.0.2:
 
 ```text
-dist/AudioRoleSync-v0.0.1-win-x64-portable.zip
-dist/AudioRoleSync-v0.0.1-win-x64-setup.exe
+dist/AudioRoleSync-v0.0.2-win-x64-portable.zip
+dist/AudioRoleSync-v0.0.2-win-x64-setup.exe
 ```
 
 The Release configuration statically links the MSVC runtime and enables link-time optimization, dead-code elimination, and identical COMDAT folding.
