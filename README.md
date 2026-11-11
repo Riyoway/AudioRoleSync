@@ -93,7 +93,7 @@ AudioRoleSync listens for Windows Core Audio default-device changes through `IMM
 
 When the default render (playback) or capture (microphone) endpoint for the normal multimedia role changes, the application compares it with the corresponding communications endpoint. If they differ, it updates only that data flow's communications role to use the same endpoint. Playback and microphone synchronization can be switched on or off separately.
 
-The application changes **default device assignments only**; it does not record microphone audio, change microphone levels, or turn a microphone on or off. Settings are saved per user under `HKCU\\Software\\AudioRoleSync`.
+The application changes **default device assignments only**; it does not record microphone audio, change microphone levels, or turn a microphone on or off. Settings are saved per user under `HKCU\Software\AudioRoleSync`.
 
 Windows does not provide a documented public API for changing the default endpoint role. AudioRoleSync therefore uses the commonly used undocumented `IPolicyConfig::SetDefaultEndpoint` interface for this single operation. This is isolated to a small part of the codebase, but compatibility with future Windows versions cannot be guaranteed.
 
