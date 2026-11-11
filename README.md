@@ -3,7 +3,7 @@
 
 # AudioRoleSync
 
-**Keep Windows' default communications playback device in sync with the current default output.**
+**Keep Windows' default communications playback and microphone devices in sync with your normal defaults.**
 
 <p>
   <a href="https://github.com/Riyoway/AudioRoleSync/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/Riyoway/AudioRoleSync?display_name=tag&style=flat-square"></a>
@@ -23,9 +23,9 @@
 
 ---
 
-AudioRoleSync is a tiny native Windows tray utility that keeps the **Default Communications playback device** synchronized with the normal **Default playback device**.
+AudioRoleSync is a tiny native Windows tray utility that keeps the **Default Communications playback and recording devices** synchronized with the normal **Default playback and recording devices**.
 
-Windows maintains separate default roles for general audio and communications audio. Because of that, apps that use the communications role can remain attached to an old output after the normal Windows output is changed. AudioRoleSync keeps both playback roles aligned automatically.
+Windows maintains separate default roles for general audio and communications audio. Because of that, apps that use the communications role can remain attached to an old speaker or microphone after the normal Windows default is changed. AudioRoleSync keeps both sets of roles aligned automatically, with independent playback and microphone switches.
 
 ## Demo
 
@@ -35,7 +35,8 @@ GitHub does not render repository MP4 files inline inside README pages, so the d
 
 ## Features
 
-- **Automatic synchronization** of the default communications playback device with the normal default playback device.
+- **Automatic synchronization** of communications playback and microphone defaults with their respective normal Windows defaults.
+- **Independent playback and microphone switches** in the tray menu (both enabled by default).
 - **System tray only** with no settings window or visible background UI.
 - **Starts with Windows by default** on first launch.
 - **Manual Sync now** action from the tray context menu.
@@ -68,27 +69,31 @@ AudioRoleSync has no main window. Right-click its system tray icon to access:
 
 | Action | Description |
 | --- | --- |
-| **Automatic sync** | Enable or disable automatic synchronization. |
-| **Sync now** | Immediately synchronize the playback roles. |
+| **Automatic sync** | Enable or disable automatic synchronization for the selected device types. |
+| **Sync playback** | Include playback/output devices in synchronization. Enabled by default. |
+| **Sync microphone** | Include recording/input devices in synchronization. Enabled by default. |
+| **Sync now** | Immediately synchronize the enabled device types, even if Automatic sync is off. |
 | **Start with Windows** | Enable or disable startup at Windows sign-in. |
 | **Exit** | Close AudioRoleSync. |
 
 With automatic sync enabled, the flow is simply:
 
 ```text
-Windows default playback changes
-              ↓
-     AudioRoleSync detects it
-              ↓
-Default Communications playback
-   is updated to the same device
+Windows default playback or microphone changes
+                       ↓
+           AudioRoleSync detects it
+                       ↓
+     Default Communications device
+     for that type is set to match
 ```
 
 ## How it works
 
 AudioRoleSync listens for Windows Core Audio default-device changes through `IMMNotificationClient::OnDefaultDeviceChanged`.
 
-When the default render endpoint for the normal playback role changes, the application compares it with the communications render endpoint. If they differ, it updates the communications role to use the same endpoint.
+When the default render (playback) or capture (microphone) endpoint for the normal multimedia role changes, the application compares it with the corresponding communications endpoint. If they differ, it updates only that data flow's communications role to use the same endpoint. Playback and microphone synchronization can be switched on or off separately.
+
+The application changes **default device assignments only**; it does not record microphone audio, change microphone levels, or turn a microphone on or off. Settings are saved per user under `HKCU\\Software\\AudioRoleSync`.
 
 Windows does not provide a documented public API for changing the default endpoint role. AudioRoleSync therefore uses the commonly used undocumented `IPolicyConfig::SetDefaultEndpoint` interface for this single operation. This is isolated to a small part of the codebase, but compatibility with future Windows versions cannot be guaranteed.
 
@@ -155,7 +160,7 @@ src/                 Native application source
 
 ## Limitations
 
-- v0.0.1 synchronizes playback devices only. Microphone and recording defaults are not modified.
+- The original v0.0.1 release synchronized playback only. Microphone support is available after updating to a build containing this change.
 - The default-endpoint write operation relies on the undocumented Windows `IPolicyConfig` interface.
 - Only x64 builds are currently provided.
 
