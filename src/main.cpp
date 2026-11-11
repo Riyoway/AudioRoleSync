@@ -18,6 +18,8 @@ constexpr wchar_t kRunKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Ru
 constexpr wchar_t kSettingsKey[] = L"Software\\AudioRoleSync";
 constexpr wchar_t kRunValue[] = L"AudioRoleSync";
 constexpr wchar_t kSyncEnabledValue[] = L"SyncEnabled";
+constexpr wchar_t kPlaybackEnabledValue[] = L"SyncPlaybackEnabled";
+constexpr wchar_t kMicrophoneEnabledValue[] = L"SyncMicrophoneEnabled";
 constexpr wchar_t kStartupConfiguredValue[] = L"StartupConfigured";
 
 constexpr UINT kTrayId = 1;
@@ -28,6 +30,8 @@ constexpr UINT kSyncDebounceMs = 120;
 
 constexpr UINT kMenuSyncEnabled = 1001;
 constexpr UINT kMenuSyncNow = 1002;
+constexpr UINT kMenuSyncPlayback = 1005;
+constexpr UINT kMenuSyncMicrophone = 1006;
 constexpr UINT kMenuStartWithWindows = 1003;
 constexpr UINT kMenuExit = 1004;
 
@@ -94,7 +98,9 @@ public:
 
     bool Initialize(HINSTANCE instance) {
         instance_ = instance;
-        syncEnabled_ = ReadSyncEnabled();
+        syncEnabled_ = ReadSettingEnabled(kSyncEnabledValue);
+        syncPlaybackEnabled_ = ReadSettingEnabled(kPlaybackEnabledValue);
+        syncMicrophoneEnabled_ = ReadSettingEnabled(kMicrophoneEnabledValue);
         EnsureStartWithWindowsDefault();
         taskbarCreatedMessage_ = RegisterWindowMessageW(L"TaskbarCreated");
 
@@ -135,7 +141,7 @@ public:
         return static_cast<int>(message.wParam);
     }
 
-    void NotifyDefaultPlaybackChanged() noexcept {
+    void NotifyDefaultDeviceChanged() noexcept {
         if (window_) PostMessageW(window_, kDeviceChangedMessage, 0, 0);
     }
 
@@ -187,8 +193,18 @@ private:
         switch (command) {
         case kMenuSyncEnabled:
             syncEnabled_ = !syncEnabled_;
-            WriteSyncEnabled(syncEnabled_);
+            WriteSettingEnabled(kSyncEnabledValue, syncEnabled_);
             if (syncEnabled_) SyncNow();
+            break;
+        case kMenuSyncPlayback:
+            syncPlaybackEnabled_ = !syncPlaybackEnabled_;
+            WriteSettingEnabled(kPlaybackEnabledValue, syncPlaybackEnabled_);
+            if (syncEnabled_ && syncPlaybackEnabled_) SyncNow();
+            break;
+        case kMenuSyncMicrophone:
+            syncMicrophoneEnabled_ = !syncMicrophoneEnabled_;
+            WriteSettingEnabled(kMicrophoneEnabledValue, syncMicrophoneEnabled_);
+            if (syncEnabled_ && syncMicrophoneEnabled_) SyncNow();
             break;
         case kMenuSyncNow:
             SyncNow();
@@ -205,11 +221,26 @@ private:
         }
     }
 
+    // Each data flow has its own default multimedia and communications roles.
+    // Failing to synchronize one flow must not prevent the other from updating.
     bool SyncNow() noexcept {
         if (!enumerator_) return false;
 
+        bool success = true;
+        if (syncPlaybackEnabled_) {
+            const bool playbackSynced = SyncFlow(eRender);
+            success = success && playbackSynced;
+        }
+        if (syncMicrophoneEnabled_) {
+            const bool microphoneSynced = SyncFlow(eCapture);
+            success = success && microphoneSynced;
+        }
+        return success;
+    }
+
+    bool SyncFlow(EDataFlow flow) noexcept {
         IMMDevice* multimedia = nullptr;
-        HRESULT hr = enumerator_->GetDefaultAudioEndpoint(eRender, eMultimedia, &multimedia);
+        HRESULT hr = enumerator_->GetDefaultAudioEndpoint(flow, eMultimedia, &multimedia);
         if (FAILED(hr) || !multimedia) return false;
 
         LPWSTR multimediaId = nullptr;
@@ -219,7 +250,7 @@ private:
 
         bool alreadySynced = false;
         IMMDevice* communications = nullptr;
-        if (SUCCEEDED(enumerator_->GetDefaultAudioEndpoint(eRender, eCommunications, &communications)) && communications) {
+        if (SUCCEEDED(enumerator_->GetDefaultAudioEndpoint(flow, eCommunications, &communications)) && communications) {
             LPWSTR communicationsId = nullptr;
             if (SUCCEEDED(communications->GetId(&communicationsId)) && communicationsId) {
                 alreadySynced = (_wcsicmp(multimediaId, communicationsId) == 0);
@@ -271,6 +302,10 @@ private:
 
         AppendMenuW(menu, MF_STRING | (syncEnabled_ ? MF_CHECKED : MF_UNCHECKED),
                     kMenuSyncEnabled, L"Automatic sync");
+        AppendMenuW(menu, MF_STRING | (syncPlaybackEnabled_ ? MF_CHECKED : MF_UNCHECKED),
+                    kMenuSyncPlayback, L"Sync playback");
+        AppendMenuW(menu, MF_STRING | (syncMicrophoneEnabled_ ? MF_CHECKED : MF_UNCHECKED),
+                    kMenuSyncMicrophone, L"Sync microphone");
         AppendMenuW(menu, MF_STRING, kMenuSyncNow, L"Sync now");
         AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(menu, MF_STRING | (IsStartWithWindowsEnabled() ? MF_CHECKED : MF_UNCHECKED),
@@ -286,21 +321,21 @@ private:
         DestroyMenu(menu);
     }
 
-    static bool ReadSyncEnabled() noexcept {
+    static bool ReadSettingEnabled(LPCWSTR setting) noexcept {
         DWORD value = 1;
         DWORD size = sizeof(value);
         DWORD type = 0;
-        if (RegGetValueW(HKEY_CURRENT_USER, kSettingsKey, kSyncEnabledValue,
+        if (RegGetValueW(HKEY_CURRENT_USER, kSettingsKey, setting,
                          RRF_RT_REG_DWORD, &type, &value, &size) != ERROR_SUCCESS) return true;
         return value != 0;
     }
 
-    static void WriteSyncEnabled(bool enabled) noexcept {
+    static void WriteSettingEnabled(LPCWSTR setting, bool enabled) noexcept {
         HKEY key = nullptr;
         if (RegCreateKeyExW(HKEY_CURRENT_USER, kSettingsKey, 0, nullptr, 0, KEY_SET_VALUE,
                             nullptr, &key, nullptr) != ERROR_SUCCESS) return;
-        DWORD value = enabled ? 1u : 0u;
-        RegSetValueExW(key, kSyncEnabledValue, 0, REG_DWORD,
+        const DWORD value = enabled ? 1u : 0u;
+        RegSetValueExW(key, setting, 0, REG_DWORD,
                        reinterpret_cast<const BYTE*>(&value), sizeof(value));
         RegCloseKey(key);
     }
@@ -392,12 +427,15 @@ private:
     NotificationClient* notificationClient_ = nullptr;
     bool callbackRegistered_ = false;
     bool syncEnabled_ = true;
+    bool syncPlaybackEnabled_ = true;
+    bool syncMicrophoneEnabled_ = true;
     bool shuttingDown_ = false;
 };
 
 HRESULT STDMETHODCALLTYPE NotificationClient::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR) {
-    if (flow == eRender && (role == eMultimedia || role == eConsole) && app_) {
-        app_->NotifyDefaultPlaybackChanged();
+    if ((flow == eRender || flow == eCapture) &&
+        (role == eMultimedia || role == eConsole) && app_) {
+        app_->NotifyDefaultDeviceChanged();
     }
     return S_OK;
 }
